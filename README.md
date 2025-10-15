@@ -29,7 +29,7 @@ The analysis was performed using Microsoft SQL Server, and insights were later v
 
 - High-value or anomalous transaction detection.
 
-Credit and portfolio risk evaluation.
+- Credit and portfolio risk evaluation.
 
 **DATA SOURCE AND SCHEMA:** 
 The database contains four main tables:
