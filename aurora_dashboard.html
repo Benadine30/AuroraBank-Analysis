@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aurora Bank — Financial Intelligence Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080810;
+    --surface: #0d0d1a;
+    --card: #111128;
+    --card2: #0f0f22;
+    --border: #1e1e3a;
+    --accent-cyan: #00d4ff;
+    --accent-purple: #7b2fbe;
+    --accent-orange: #ff6b35;
+    --accent-green: #39ff14;
+    --accent-red: #ff3333;
+    --accent-gold: #ffd700;
+    --text: #e8e8f5;
+    --muted: #5a5a7a;
+    --dimmed: #9090b0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(8,8,16,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2rem; height: 60px;
+  }
+  .nav-brand { font-family: 'Orbitron', monospace; font-size: 1.1rem; font-weight:900; color: var(--accent-cyan); letter-spacing: 3px; }
+  .nav-tabs { display: flex; gap: 0.5rem; }
+  .nav-tab {
+    padding: 6px 18px; border-radius: 20px; font-size: 0.8rem; font-weight:500;
+    cursor: pointer; transition: all 0.3s; border: 1px solid transparent;
+    color: var(--muted); letter-spacing: 0.5px;
+  }
+  .nav-tab.active, .nav-tab:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); background: rgba(0,212,255,0.07); }
+  .nav-date { font-size: 0.75rem; color: var(--muted); }
+
+  /* PAGES */
+  .page { display: none; padding: 1.5rem 2rem; animation: fadeIn 0.4s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+  /* PAGE HEADER */
+  .page-header {
+    margin-bottom: 1.5rem;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .page-title { font-family: 'Orbitron', monospace; font-size: 1.6rem; font-weight:900; color: var(--text); letter-spacing:2px; }
+  .page-subtitle { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+  .page-badge { padding: 5px 14px; border-radius: 20px; font-size: 0.7rem; font-weight:600; letter-spacing:1px; }
+
+  /* GRID UTILS */
+  .grid { display: grid; gap: 1rem; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: repeat(3,1fr); }
+  .grid-4 { grid-template-columns: repeat(4,1fr); }
+  .grid-6 { grid-template-columns: repeat(6,1fr); }
+  .grid-7030 { grid-template-columns: 7fr 3fr; }
+  .grid-5050 { grid-template-columns: 1fr 1fr; }
+  .grid-4060 { grid-template-columns: 4fr 6fr; }
+  .col-span-2 { grid-column: span 2; }
+  .col-span-3 { grid-column: span 3; }
+
+  /* KPI CARD */
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem 1rem 1rem;
+    position: relative; overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent-color, var(--accent-cyan));
+  }
+  .kpi-card::after {
+    content: ''; position: absolute; top: 0; right: 0; width: 60px; height: 60px;
+    background: var(--accent-color, var(--accent-cyan)); opacity: 0.04;
+    border-radius: 0 0 0 60px;
+  }
+  .kpi-label { font-size: 0.65rem; letter-spacing: 2px; color: var(--muted); font-weight:600; text-transform: uppercase; margin-bottom: 0.5rem; }
+  .kpi-value { font-family: 'Orbitron', monospace; font-size: 1.6rem; font-weight:700; color: var(--accent-color, var(--accent-cyan)); line-height:1; }
+  .kpi-sub { font-size: 0.7rem; color: var(--dimmed); margin-top: 0.4rem; }
+  .kpi-trend { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 0.65rem; font-weight:600; margin-top:0.3rem; }
+  .trend-up { background: rgba(57,255,20,0.12); color: var(--accent-green); }
+  .trend-down { background: rgba(255,51,51,0.12); color: var(--accent-red); }
+  .trend-neutral { background: rgba(0,212,255,0.1); color: var(--accent-cyan); }
+
+  /* CHART CARD */
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem;
+  }
+  .chart-title { font-size: 0.7rem; letter-spacing: 2px; color: var(--muted); font-weight:600; text-transform: uppercase; margin-bottom: 1rem; display:flex; justify-content:space-between; align-items:center; }
+  .chart-title span { color: var(--text); font-size: 0.85rem; letter-spacing:0; font-weight:500; font-family:'DM Sans'; text-transform:none; }
+  .chart-wrap { position:relative; }
+
+  /* TABLE */
+  .data-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+  .data-table th { padding: 8px 12px; text-align:left; color: var(--muted); font-weight:600; font-size:0.68rem; letter-spacing:1.5px; text-transform:uppercase; border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(30,30,58,0.5); color: var(--dimmed); }
+  .data-table tr:last-child td { border-bottom:none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .val-cyan { color: var(--accent-cyan) !important; font-weight:600; }
+  .val-green { color: var(--accent-green) !important; font-weight:600; }
+  .val-orange { color: var(--accent-orange) !important; font-weight:600; }
+  .val-purple { color: #a855f7 !important; font-weight:600; }
+  .val-red { color: var(--accent-red) !important; font-weight:600; }
+  .val-white { color: var(--text) !important; }
+  td:last-child, th:last-child { text-align:right; }
+
+  /* STAT ROW */
+  .stat-row { display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px solid rgba(30,30,58,0.5); }
+  .stat-row:last-child { border-bottom:none; }
+  .stat-label { font-size:0.8rem; color: var(--dimmed); }
+  .stat-value { font-size: 0.85rem; font-weight:600; }
+
+  /* PROGRESS BAR */
+  .progress-bar { height:4px; background: var(--border); border-radius:2px; margin-top:4px; }
+  .progress-fill { height:100%; border-radius:2px; transition: width 1s ease; }
+
+  /* BADGE */
+  .badge { display:inline-block; padding: 2px 8px; border-radius:10px; font-size:0.65rem; font-weight:600; letter-spacing:0.5px; }
+
+  /* DIVIDER */
+  .divider { height:1px; background: var(--border); margin: 1rem 0; }
+
+  /* SCORE BANDS */
+  .score-band { display:flex; align-items:center; gap:12px; padding: 10px 0; border-bottom: 1px solid rgba(30,30,58,0.4); }
+  .score-band:last-child { border-bottom:none; }
+  .score-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .score-band-label { flex:1; font-size:0.8rem; color: var(--dimmed); }
+  .score-band-bar { flex:2; height:6px; background: var(--border); border-radius:3px; }
+  .score-band-fill { height:100%; border-radius:3px; }
+  .score-band-count { font-size:0.8rem; font-weight:600; color:var(--text); min-width:40px; text-align:right; }
+  .score-band-pct { font-size:0.75rem; color:var(--muted); min-width:40px; text-align:right; }
+
+  /* ERROR CHIP */
+  .error-chip { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom: 1px solid rgba(30,30,58,0.4); }
+  .error-chip:last-child { border-bottom:none; }
+  .error-name { font-size:0.78rem; color:var(--dimmed); }
+  .error-count { font-family:'Orbitron'; font-size:0.85rem; color:var(--accent-red); font-weight:700; }
+
+  /* HERO METRIC */
+  .hero-metric {
+    background: linear-gradient(135deg, var(--card) 0%, #0d0d28 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align:center;
+    position:relative; overflow:hidden;
+  }
+  .hero-metric::before { content:''; position:absolute; inset:0; background: radial-gradient(circle at 50% 0%, rgba(0,212,255,0.08) 0%, transparent 70%); }
+  .hero-number { font-family:'Orbitron', monospace; font-size: 3.5rem; font-weight:900; color:var(--accent-cyan); line-height:1; position:relative; }
+  .hero-label { font-size:0.7rem; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-top:0.5rem; }
+  .hero-sub { font-size:0.85rem; color:var(--dimmed); margin-top:0.75rem; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius:3px; }
+
+  /* RESPONSIVE FALLBACK */
+  @media (max-width: 1100px) {
+    .grid-6 { grid-template-columns: repeat(3,1fr); }
+    .grid-4 { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">AURORA BANK</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="showPage('overview',this)">📊 Overview</div>
+    <div class="nav-tab" onclick="showPage('demographics',this)">👥 Demographics</div>
+    <div class="nav-tab" onclick="showPage('cards',this)">💳 Cards & Transactions</div>
+  </div>
+  <div class="nav-date">Data: 2022 – Oct 2024</div>
+</nav>
+
+<!-- ==================== PAGE 1: OVERVIEW ==================== -->
+<div id="overview" class="page active">
+  <div class="page-header">
+    <div>
+      <div class="page-title">FINANCIAL OVERVIEW</div>
+      <div class="page-subtitle">Key performance indicators & transaction summary</div>
+    </div>
+    <span class="page-badge" style="background:rgba(0,212,255,0.1);color:var(--accent-cyan);border:1px solid var(--accent-cyan);">2022–2024</span>
+  </div>
+
+  <!-- KPI Row 1 -->
+  <div class="grid grid-6" style="margin-bottom:1rem;">
+    <div class="kpi-card" style="--accent-color:var(--accent-cyan)">
+      <div class="kpi-label">Total Users</div>
+      <div class="kpi-value">2,000</div>
+      <div class="kpi-sub">Registered cardholders</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:#a855f7">
+      <div class="kpi-label">Transactions</div>
+      <div class="kpi-value">157K</div>
+      <div class="kpi-sub">Over 34 months</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:var(--accent-orange)">
+      <div class="kpi-label">Total Volume</div>
+      <div class="kpi-value">$6.87M</div>
+      <div class="kpi-sub">Gross spend</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:var(--accent-green)">
+      <div class="kpi-label">Active Cards</div>
+      <div class="kpi-value">6,146</div>
+      <div class="kpi-sub">Avg 3.07 per user</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:var(--accent-cyan)">
+      <div class="kpi-label">Avg Credit Score</div>
+      <div class="kpi-value">709.7</div>
+      <div class="kpi-sub">Band: Good</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:var(--accent-red)">
+      <div class="kpi-label">Error Rate</div>
+      <div class="kpi-value">1.74%</div>
+      <div class="kpi-sub">2,738 failed txns</div>
+    </div>
+  </div>
+
+  <!-- KPI Row 2 -->
+  <div class="grid grid-6" style="margin-bottom:1rem;">
+    <div class="kpi-card" style="--accent-color:#a855f7">
+      <div class="kpi-label">Avg Yearly Income</div>
+      <div class="kpi-value" style="font-size:1.3rem;">$45,716</div>
+      <div class="kpi-sub">Per capita: varies</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:var(--accent-red)">
+      <div class="kpi-label">Avg Total Debt</div>
+      <div class="kpi-value" style="font-size:1.3rem;">$63,710</div>
+      <div class="kpi-sub">DTI avg: 1.38x</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:var(--accent-cyan)">
+      <div class="kpi-label">Avg Credit Limit</div>
+      <div class="kpi-value" style="font-size:1.3rem;">$14,347</div>
+      <div class="kpi-sub">Total pool: $88.2M</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:var(--accent-green)">
+      <div class="kpi-label">Chip Adoption</div>
+      <div class="kpi-value" style="font-size:1.3rem;">89.6%</div>
+      <div class="kpi-sub">5,500 of 6,146 cards</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:var(--accent-orange)">
+      <div class="kpi-label">Avg Ticket Size</div>
+      <div class="kpi-value" style="font-size:1.3rem;">$43.71</div>
+      <div class="kpi-sub">Per transaction</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:#a855f7">
+      <div class="kpi-label">Online Share</div>
+      <div class="kpi-value" style="font-size:1.3rem;">11.3%</div>
+      <div class="kpi-sub">17,783 online txns</div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid grid-7030" style="margin-bottom:1rem;">
+    <div class="chart-card">
+      <div class="chart-title">MONTHLY TRANSACTION VOLUME <span>2022 – 2024</span></div>
+      <div class="chart-wrap"><canvas id="monthlyVolumeChart" height="160"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">TRANSACTION METHOD SPLIT</div>
+      <div class="chart-wrap"><canvas id="methodDonut" height="160"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Bottom Row -->
+  <div class="grid grid-2">
+    <div class="chart-card">
+      <div class="chart-title">TOP 8 SPENDING CATEGORIES</div>
+      <table class="data-table">
+        <thead><tr><th>#</th><th>Category</th><th>Volume ($)</th></tr></thead>
+        <tbody>
+          <tr><td class="val-cyan">1</td><td class="val-white">Money Transfer</td><td class="val-orange">$596,560</td></tr>
+          <tr><td class="val-cyan">2</td><td class="val-white">Grocery Stores & Supermarkets</td><td class="val-orange">$501,981</td></tr>
+          <tr><td class="val-cyan">3</td><td class="val-white">Wholesale Clubs</td><td class="val-orange">$471,079</td></tr>
+          <tr><td class="val-cyan">4</td><td class="val-white">Drug Stores & Pharmacies</td><td class="val-orange">$430,487</td></tr>
+          <tr><td class="val-cyan">5</td><td class="val-white">Service Stations</td><td class="val-orange">$380,789</td></tr>
+          <tr><td class="val-cyan">6</td><td class="val-white">Utilities (Electric/Gas/Water)</td><td class="val-orange">$357,798</td></tr>
+          <tr><td class="val-cyan">7</td><td class="val-white">Department Stores</td><td class="val-orange">$337,204</td></tr>
+          <tr><td class="val-cyan">8</td><td class="val-white">Eating Places & Restaurants</td><td class="val-orange">$316,036</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">TRANSACTION ERRORS BREAKDOWN</div>
+      <div class="error-chip"><span class="error-name">Insufficient Balance</span><span class="error-count">1,760</span></div>
+      <div class="error-chip"><span class="error-name">Bad PIN</span><span class="error-count">388</span></div>
+      <div class="error-chip"><span class="error-name">Technical Glitch</span><span class="error-count">324</span></div>
+      <div class="error-chip"><span class="error-name">Bad Card Number</span><span class="error-count">93</span></div>
+      <div class="error-chip"><span class="error-name">Bad Expiration</span><span class="error-count">73</span></div>
+      <div class="error-chip"><span class="error-name">Bad CVV</span><span class="error-count">65</span></div>
+      <div class="error-chip"><span class="error-name">Bad Zipcode</span><span class="error-count">17</span></div>
+      <div class="divider"></div>
+      <div class="stat-row"><span class="stat-label">Total Errors</span><span class="stat-value val-red">2,738</span></div>
+      <div class="stat-row"><span class="stat-label">Success Rate</span><span class="stat-value val-green">98.26%</span></div>
+      <div class="stat-row"><span class="stat-label">Largest Error Category</span><span class="stat-value val-orange">Insufficient Balance (64.3%)</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAGE 2: DEMOGRAPHICS ==================== -->
+<div id="demographics" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">USER DEMOGRAPHICS</div>
+      <div class="page-subtitle">Customer profiles, credit health & financial behavior</div>
+    </div>
+    <span class="page-badge" style="background:rgba(123,47,190,0.15);color:#a855f7;border:1px solid #7b2fbe;">2,000 Users</span>
+  </div>
+
+  <!-- Hero metrics -->
+  <div class="grid grid-4" style="margin-bottom:1rem;">
+    <div class="hero-metric">
+      <div class="hero-number" style="color:var(--accent-cyan);">45.4</div>
+      <div class="hero-label">Average User Age</div>
+      <div class="hero-sub">Range: 18 – 101 yrs</div>
+    </div>
+    <div class="hero-metric">
+      <div class="hero-number" style="color:#a855f7;font-size:2.5rem;">$45,716</div>
+      <div class="hero-label">Avg Yearly Income</div>
+      <div class="hero-sub">Median ~$42K</div>
+    </div>
+    <div class="hero-metric">
+      <div class="hero-number" style="color:var(--accent-red);font-size:2.5rem;">1.38x</div>
+      <div class="hero-label">Avg Debt-to-Income</div>
+      <div class="hero-sub">High risk threshold: >2x</div>
+    </div>
+    <div class="hero-metric">
+      <div class="hero-number" style="color:var(--accent-green);">709</div>
+      <div class="hero-label">Avg Credit Score</div>
+      <div class="hero-sub">Band: Good (670–740)</div>
+    </div>
+  </div>
+
+  <div class="grid grid-2" style="margin-bottom:1rem;">
+    <div class="chart-card">
+      <div class="chart-title">AGE GROUP DISTRIBUTION</div>
+      <div class="chart-wrap"><canvas id="ageChart" height="180"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">CREDIT SCORE BANDS</div>
+      <div class="score-band">
+        <div class="score-dot" style="background:var(--accent-red)"></div>
+        <div class="score-band-label">Poor (300–580)</div>
+        <div class="score-band-bar"><div class="score-band-fill" style="width:4.1%;background:var(--accent-red)"></div></div>
+        <div class="score-band-count">82</div>
+        <div class="score-band-pct" style="color:var(--accent-red)">4.1%</div>
+      </div>
+      <div class="score-band">
+        <div class="score-dot" style="background:#ff9500"></div>
+        <div class="score-band-label">Fair (580–670)</div>
+        <div class="score-band-bar"><div class="score-band-fill" style="width:17.5%;background:#ff9500"></div></div>
+        <div class="score-band-count">350</div>
+        <div class="score-band-pct" style="color:#ff9500">17.5%</div>
+      </div>
+      <div class="score-band">
+        <div class="score-dot" style="background:var(--accent-cyan)"></div>
+        <div class="score-band-label">Good (670–740)</div>
+        <div class="score-band-bar"><div class="score-band-fill" style="width:46.9%;background:var(--accent-cyan)"></div></div>
+        <div class="score-band-count">937</div>
+        <div class="score-band-pct" style="color:var(--accent-cyan)">46.9%</div>
+      </div>
+      <div class="score-band">
+        <div class="score-dot" style="background:var(--accent-green)"></div>
+        <div class="score-band-label">Very Good (740–800)</div>
+        <div class="score-band-bar"><div class="score-band-fill" style="width:23.4%;background:var(--accent-green)"></div></div>
+        <div class="score-band-count">468</div>
+        <div class="score-band-pct" style="color:var(--accent-green)">23.4%</div>
+      </div>
+      <div class="score-band">
+        <div class="score-dot" style="background:#a855f7"></div>
+        <div class="score-band-label">Exceptional (800–850)</div>
+        <div class="score-band-bar"><div class="score-band-fill" style="width:8.2%;background:#a855f7"></div></div>
+        <div class="score-band-count">163</div>
+        <div class="score-band-pct" style="color:#a855f7">8.2%</div>
+      </div>
+      <div class="divider"></div>
+      <div class="stat-row"><span class="stat-label">Good+ Score Users</span><span class="stat-value val-green">78.5% (1,568 users)</span></div>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="chart-card">
+      <div class="chart-title">GENDER SPLIT</div>
+      <div class="chart-wrap"><canvas id="genderChart" height="200"></canvas></div>
+      <div style="margin-top:1rem;">
+        <div class="stat-row"><span class="stat-label">Female</span><span class="stat-value val-cyan">1,016 (50.8%)</span></div>
+        <div class="stat-row"><span class="stat-label">Male</span><span class="stat-value val-purple">984 (49.2%)</span></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">INCOME BY AGE GROUP</div>
+      <div class="chart-wrap"><canvas id="incomeAgeChart" height="200"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">DEBT-TO-INCOME ANALYSIS</div>
+      <div class="stat-row"><span class="stat-label">Average DTI</span><span class="stat-value val-orange">1.38x</span></div>
+      <div class="stat-row"><span class="stat-label">Median DTI</span><span class="stat-value val-orange">1.42x</span></div>
+      <div class="stat-row"><span class="stat-label">Avg Total Debt</span><span class="stat-value val-red">$63,710</span></div>
+      <div class="stat-row"><span class="stat-label">Avg Yearly Income</span><span class="stat-value val-green">$45,716</span></div>
+      <div class="divider"></div>
+      <div class="stat-row"><span class="stat-label">High Risk (DTI > 2x)</span><span class="stat-value val-red">399 users (20.0%)</span></div>
+      <div class="stat-row"><span class="stat-label">Low Risk (DTI < 0.5x)</span><span class="stat-value val-green">214 users (10.7%)</span></div>
+      <div class="divider"></div>
+      <div style="font-size:0.72rem;color:var(--muted);line-height:1.6;padding-top:0.5rem;">
+        <strong style="color:var(--dimmed)">⚠ Insight:</strong> The average DTI of 1.38x indicates most customers carry significant debt relative to income. 20% are high-risk (DTI &gt; 2x). This warrants close monitoring for delinquency risk, especially in the 65+ age bracket where income drops to ~$38.5K.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAGE 3: CARDS & TRANSACTIONS ==================== -->
+<div id="cards" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">CARDS & TRANSACTIONS</div>
+      <div class="page-subtitle">Portfolio composition, transaction intelligence & geographic reach</div>
+    </div>
+    <span class="page-badge" style="background:rgba(255,107,53,0.12);color:var(--accent-orange);border:1px solid var(--accent-orange);">6,146 Cards · 157K Txns</span>
+  </div>
+
+  <div class="grid grid-4" style="margin-bottom:1rem;">
+    <div class="kpi-card" style="--accent-color:var(--accent-orange)">
+      <div class="kpi-label">Total Cards</div>
+      <div class="kpi-value">6,146</div>
+      <div class="kpi-sub">Avg 3.07/user</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:var(--accent-cyan)">
+      <div class="kpi-label">Total Credit Pool</div>
+      <div class="kpi-value" style="font-size:1.3rem;">$88.2M</div>
+      <div class="kpi-sub">Across all cards</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:var(--accent-green)">
+      <div class="kpi-label">Online Avg Ticket</div>
+      <div class="kpi-value" style="font-size:1.3rem;">$59.35</div>
+      <div class="kpi-sub">Highest of 3 methods</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:#a855f7">
+      <div class="kpi-label">States Covered</div>
+      <div class="kpi-value">50+</div>
+      <div class="kpi-sub">CA leads with 19.2K txns</div>
+    </div>
+  </div>
+
+  <div class="grid grid-2" style="margin-bottom:1rem;">
+    <div class="chart-card">
+      <div class="chart-title">CARD BRAND DISTRIBUTION</div>
+      <div class="chart-wrap"><canvas id="brandChart" height="180"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">CARD TYPE BREAKDOWN</div>
+      <div class="chart-wrap"><canvas id="typeChart" height="180"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="chart-card">
+      <div class="chart-title">TRANSACTION METHOD ANALYSIS</div>
+      <table class="data-table">
+        <thead><tr><th>Method</th><th>Count</th><th>Avg Ticket</th></tr></thead>
+        <tbody>
+          <tr><td class="val-cyan">Chip</td><td class="val-white">112,114</td><td class="val-green">$41.41</td></tr>
+          <tr><td class="val-purple">Swipe</td><td class="val-white">27,327</td><td class="val-orange">$43.06</td></tr>
+          <tr><td class="val-orange">Online</td><td class="val-white">17,783</td><td class="val-orange">$59.35</td></tr>
+        </tbody>
+      </table>
+      <div class="divider"></div>
+      <div class="stat-row"><span class="stat-label">Chip Transaction Share</span><span class="stat-value val-green">71.3%</span></div>
+      <div class="stat-row"><span class="stat-label">Online Transaction Share</span><span class="stat-value val-orange">11.3%</span></div>
+      <div class="stat-row"><span class="stat-label">Swipe Transaction Share</span><span class="stat-value val-purple">17.4%</span></div>
+      <div class="divider"></div>
+      <div style="font-size:0.72rem;color:var(--muted);line-height:1.6;">
+        <strong style="color:var(--dimmed)">💡 Insight:</strong> Online transactions generate the highest avg ticket ($59.35 vs $41.41 chip). Growing online channel could increase portfolio revenue per transaction significantly.
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">TOP 10 STATES BY VOLUME</div>
+      <table class="data-table">
+        <thead><tr><th>State</th><th>Transactions</th></tr></thead>
+        <tbody>
+          <tr><td class="val-orange">CA</td><td class="val-white">19,241</td></tr>
+          <tr><td class="val-orange">TX</td><td class="val-white">14,988</td></tr>
+          <tr><td class="val-orange">NY</td><td class="val-white">10,035</td></tr>
+          <tr><td class="val-orange">NC</td><td class="val-white">5,737</td></tr>
+          <tr><td class="val-orange">GA</td><td class="val-white">5,731</td></tr>
+          <tr><td class="val-orange">FL</td><td class="val-white">5,708</td></tr>
+          <tr><td class="val-orange">IL</td><td class="val-white">5,129</td></tr>
+          <tr><td class="val-orange">TN</td><td class="val-white">4,329</td></tr>
+          <tr><td class="val-orange">IN</td><td class="val-white">4,187</td></tr>
+          <tr><td class="val-orange">OH</td><td class="val-white">4,008</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">CARD BRAND AVG CREDIT LIMITS</div>
+      <div class="stat-row">
+        <span class="stat-label">Visa</span>
+        <span class="stat-value val-cyan">$14,737</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--accent-cyan)"></div></div>
+      <br>
+      <div class="stat-row">
+        <span class="stat-label">Mastercard</span>
+        <span class="stat-value val-purple">$14,660</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:99.5%;background:#a855f7"></div></div>
+      <br>
+      <div class="stat-row">
+        <span class="stat-label">Amex</span>
+        <span class="stat-value val-orange">$11,436</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:77.6%;background:var(--accent-orange)"></div></div>
+      <br>
+      <div class="stat-row">
+        <span class="stat-label">Discover</span>
+        <span class="stat-value val-green">$10,816</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:73.4%;background:var(--accent-green)"></div></div>
+      <div class="divider"></div>
+      <div class="stat-row"><span class="stat-label">Chip Adoption</span><span class="stat-value val-green">89.6% (5,500 cards)</span></div>
+      <div class="stat-row"><span class="stat-label">No Chip Cards</span><span class="stat-value val-red">10.4% (646 cards)</span></div>
+      <div class="divider"></div>
+      <div style="font-size:0.72rem;color:var(--muted);line-height:1.6;">
+        <strong style="color:var(--dimmed)">⚠ Action:</strong> 646 cards without chips represent a security risk. Priority reissuance recommended.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+const chartDefaults = {
+  responsive: true,
+  maintainAspectRatio: true,
+  plugins: { legend: { labels: { color: '#9090b0', font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } } }
+};
+
+// Chart 1: Monthly Volume
+const months = ['Jan-22','Mar-22','May-22','Jul-22','Sep-22','Nov-22','Jan-23','Mar-23','May-23','Jul-23','Sep-23','Nov-23','Jan-24','Mar-24','May-24','Jul-24','Sep-24'];
+const volumes = [178432,185210,191840,188920,194380,187540,195280,203140,199870,202440,198120,196947,213251,198152,201583,198294,201935];
+new Chart(document.getElementById('monthlyVolumeChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [{
+      label: 'Monthly Volume ($)',
+      data: volumes,
+      borderColor: '#00d4ff',
+      backgroundColor: 'rgba(0,212,255,0.07)',
+      borderWidth: 2,
+      pointRadius: 3,
+      pointBackgroundColor: '#00d4ff',
+      fill: true,
+      tension: 0.4
+    }]
+  },
+  options: {
+    ...chartDefaults,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(30,30,58,0.6)' }, ticks: { color: '#5a5a7a', font: { size: 9 } } },
+      y: { grid: { color: 'rgba(30,30,58,0.6)' }, ticks: { color: '#5a5a7a', font: { size: 9 }, callback: v => '$'+Math.round(v/1000)+'K' } }
+    }
+  }
+});
+
+// Chart 2: Method Donut
+new Chart(document.getElementById('methodDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Chip','Swipe','Online'],
+    datasets: [{ data: [112114,27327,17783], backgroundColor: ['#00d4ff','#7b2fbe','#ff6b35'], borderWidth: 0, hoverOffset: 6 }]
+  },
+  options: { ...chartDefaults, cutout: '72%' }
+});
+
+// Chart 3: Age Bar
+new Chart(document.getElementById('ageChart'), {
+  type: 'bar',
+  data: {
+    labels: ['18-25','26-35','36-45','46-55','56-65','65+'],
+    datasets: [{
+      label: 'Users',
+      data: [337,357,342,385,288,291],
+      backgroundColor: ['#00d4ff','#7b2fbe','#ff6b35','#39ff14','#ffd700','#ff3366'],
+      borderRadius: 4, borderSkipped: false
+    }]
+  },
+  options: {
+    ...chartDefaults,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#9090b0', font: { size: 10 } } },
+      y: { grid: { color: 'rgba(30,30,58,0.6)' }, ticks: { color: '#5a5a7a', font: { size: 9 } } }
+    }
+  }
+});
+
+// Chart 4: Gender
+new Chart(document.getElementById('genderChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Female','Male'],
+    datasets: [{ data: [1016,984], backgroundColor: ['#00d4ff','#a855f7'], borderWidth: 0, hoverOffset: 6 }]
+  },
+  options: { ...chartDefaults, cutout: '72%' }
+});
+
+// Chart 5: Income by Age
+new Chart(document.getElementById('incomeAgeChart'), {
+  type: 'bar',
+  data: {
+    labels: ['18-25','26-35','36-45','46-55','56-65','65+'],
+    datasets: [{
+      label: 'Avg Income ($)',
+      data: [48157,47150,45714,47220,46380,38484],
+      backgroundColor: 'rgba(255,107,53,0.7)',
+      borderColor: '#ff6b35',
+      borderWidth: 1,
+      borderRadius: 4, borderSkipped: false
+    }]
+  },
+  options: {
+    ...chartDefaults,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#9090b0', font: { size: 10 } } },
+      y: { grid: { color: 'rgba(30,30,58,0.6)' }, ticks: { color: '#5a5a7a', font: { size: 9 }, callback: v => '$'+Math.round(v/1000)+'K' }, min: 30000 }
+    }
+  }
+});
+
+// Chart 6: Brand
+new Chart(document.getElementById('brandChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Mastercard','Visa','Amex','Discover'],
+    datasets: [{
+      label: 'Cards',
+      data: [3209,2326,402,209],
+      backgroundColor: ['#a855f7','#00d4ff','#ff6b35','#39ff14'],
+      borderRadius: 4, borderSkipped: false
+    }]
+  },
+  options: {
+    ...chartDefaults,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#9090b0' } },
+      y: { grid: { color: 'rgba(30,30,58,0.6)' }, ticks: { color: '#5a5a7a', font: { size: 9 } } }
+    }
+  }
+});
+
+// Chart 7: Type
+new Chart(document.getElementById('typeChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Debit','Credit','Debit Prepaid'],
+    datasets: [{ data: [3511,2057,578], backgroundColor: ['#00d4ff','#7b2fbe','#ff6b35'], borderWidth: 0, hoverOffset: 6 }]
+  },
+  options: { ...chartDefaults, cutout: '65%' }
+});
+</script>
+</body>
+</html>
