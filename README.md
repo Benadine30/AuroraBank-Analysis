@@ -1,6 +1,6 @@
 # AuroraBank-Analysis
 
-Live Dashboard: https://benadine30.github.io/AuroraBank-Analysis/dasboard
+Live Dashboard: https://benadine30.github.io/AuroraBank-Analysis/dashboard
 
 **OVERVIEW:**
 
