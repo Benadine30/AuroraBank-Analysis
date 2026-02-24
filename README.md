@@ -1,7 +1,5 @@
 # AuroraBank-Analysis
 
-Live Dashboard: https://benadine30.github.io/AuroraBank-Analysis/dashboard/
-
 **OVERVIEW:**
 
 This project is an end-to-end SQL analytics case study for Aurora Bank, designed to uncover insights from customer, transaction, credit card data, and behaviors to unlock new opportunities for growth and engagement. As a data analyst, my goal was to analyze customer demographics, financial health, card usage, and transaction behaviors to provide data-driven recommendations that can improve customer engagement, identify potential risks, and strengthen fraud detection.
